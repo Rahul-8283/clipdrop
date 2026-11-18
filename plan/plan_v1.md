@@ -1,4 +1,4 @@
-# DropClip v1 — Build Spec
+# Clipdrop v1 — Build Spec
 
 ## 0. How to work
 - Build milestone by milestone (section 10). Finish and test one before starting the next.
@@ -13,29 +13,29 @@ A single Go program, run manually in a terminal on two laptops (a MacBook and a 
 Privacy rules: no cloud, no accounts, no telemetry. Traffic is encrypted and only paired devices are accepted.
 
 ## 2. Commands
-- <APP_NAME> pair — host side: generates a short single-use pairing code (format like 4821-hawk-moon), prints it, waits up to 2 minutes for the other laptop.
-- <APP_NAME> pair join — joiner side: prompts for the code, finds the host (mDNS, or --addr ip:port as fallback), completes pairing.
-- <APP_NAME> run — start syncing in the foreground. Ctrl+C stops cleanly.
-- <APP_NAME> devices — list paired devices.
-- <APP_NAME> unpair <name> — remove trust for a device.
-- <APP_NAME> doctor — diagnose problems (section 8).
-- <APP_NAME> version
+- clipdrop pair — host side: generates a short single-use pairing code (format like 4821-hawk-moon), prints it, waits up to 2 minutes for the other laptop.
+- clipdrop pair join — joiner side: prompts for the code, finds the host (mDNS, or --addr ip:port as fallback), completes pairing.
+- clipdrop run — start syncing in the foreground. Ctrl+C stops cleanly.
+- clipdrop devices — list paired devices.
+- clipdrop unpair <name> — remove trust for a device.
+- clipdrop doctor — diagnose problems (section 8).
+- clipdrop version
 Flags for run: --images-only, --no-text, --port (default 47820), --peer ip:port (manual peer address fallback), --verbose.
 Use the standard flag package with subcommands. Do not add cobra.
 
 ## 3. Tech stack
-- Go 1.22+. Module path: github.com/<username>/<app-name>.
+- Go 1.22+. Module path: github.com/<username>/clipdrop.
 - Clipboard (text + images): golang.design/x/clipboard, wrapped in our own interface. Use its watch feature for change detection. Images are handled as PNG bytes.
-- Discovery: mDNS via github.com/grandcat/zeroconf (service type _<app-name>._tcp). If this library has problems, propose an alternative before switching.
+- Discovery: mDNS via github.com/grandcat/zeroconf (service type _clipdrop._tcp). If this library has problems, propose an alternative before switching.
 - Pairing: PAKE via github.com/schollz/pake (v3).
 - Transport: standard library net/http over TLS 1.3 with mutual authentication and pinned certificates (crypto/tls, crypto/x509, crypto/ecdsa). No custom crypto.
-- Storage: JSON files in the user config directory (os.UserConfigDir()/<app-name>), file permissions 0600. No SQLite in v1.
+- Storage: JSON files in the user config directory (os.UserConfigDir()/clipdrop), file permissions 0600. No SQLite in v1.
 - Logging: log/slog.
 - Testing: go test with the race detector.
 - Build natively on each OS. macOS needs Xcode command line tools because the clipboard library uses cgo there. Windows needs no C toolchain.
 
 ## 4. Folder structure
-cmd/<app-name>/main.go — entry point, subcommand dispatch
+cmd/clipdrop/main.go — entry point, subcommand dispatch
 internal/app — wires components, startup and shutdown
 internal/config — config dir, settings, defaults
 internal/identity — generates and loads this device's keypair and self-signed certificate; computes fingerprint
