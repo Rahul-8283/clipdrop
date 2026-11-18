@@ -232,12 +232,12 @@ flowchart LR
 flowchart TD
     Root["clipdrop/"]
     Cmd["cmd/clipdrop/ (Entry Point & CLI Dispatch)"]
-    Internal["internal/"]
 
     App["app/ (Component wiring & lifecycle)"]
     Config["config/ (Paths, defaults, env)"]
     Identity["identity/ (ECDSA keys, certs, fingerprint)"]
-    Platform["platform/clipboard/ (darwin, windows, fake)"]
+    Platform["platform/ (clipboard darwin/windows/fake, screenshots)"]
+    Imaging["imaging/ (PNG validation & dimensions)"]
     Engine["engine/ (Event loops, dedupe, echo filter)"]
     Netx["netx/"]
     NetxDisc["discovery/ (mDNS zeroconf)"]
@@ -245,20 +245,22 @@ flowchart TD
     NetxTrans["transport/ (mTLS HTTP server & client)"]
     Store["store/ (trusted_devices.json, received/ retention)"]
     Doctor["doctor/ (Health, firewall, and permission diagnostics)"]
+    Docs["docs/ (SPEC, protocol, troubleshooting)"]
 
     Root --> Cmd
-    Root --> Internal
-    Internal --> App
-    Internal --> Config
-    Internal --> Identity
-    Internal --> Platform
-    Internal --> Engine
-    Internal --> Netx
+    Root --> App
+    Root --> Config
+    Root --> Identity
+    Root --> Platform
+    Root --> Imaging
+    Root --> Engine
+    Root --> Netx
     Netx --> NetxDisc
     Netx --> NetxPair
     Netx --> NetxTrans
-    Internal --> Store
-    Internal --> Doctor
+    Root --> Store
+    Root --> Doctor
+    Root --> Docs
 ```
 
 ---

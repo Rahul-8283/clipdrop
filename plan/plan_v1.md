@@ -4,7 +4,7 @@
 - Build milestone by milestone (section 10). Finish and test one before starting the next.
 - Before using any library, check its current docs and confirm the API still matches. Do not guess function names.
 - Only use the dependencies listed in section 3. Ask before adding others.
-- Keep ALL OS-specific code inside internal/platform behind interfaces, using Go build tags.
+- Keep ALL OS-specific code inside platform behind interfaces, using Go build tags.
 - Keep the core logic testable with a fake clipboard and fake peers. No test may need a real clipboard or real network except the marked integration tests.
 - Respect the non-goals in section 11. Do not build tray, autostart, cloud, or Tailscale code.
 
@@ -35,20 +35,47 @@ Use the standard flag package with subcommands. Do not add cobra.
 - Build natively on each OS. macOS needs Xcode command line tools because the clipboard library uses cgo there. Windows needs no C toolchain.
 
 ## 4. Folder structure
-cmd/clipdrop/main.go — entry point, subcommand dispatch
-internal/app — wires components, startup and shutdown
-internal/config — config dir, settings, defaults
-internal/identity — generates and loads this device's keypair and self-signed certificate; computes fingerprint
-internal/platform/clipboard — interface plus _darwin and _windows implementations (and a fake for tests)
-internal/platform/screenshots — OPTIONAL folder watcher, see M8
-internal/imaging — validate PNG, size and dimension checks
-internal/engine — event handling, dedupe, echo prevention, policy (size limits, flags)
-internal/netx/discovery — mDNS announce and browse
-internal/netx/pairing — PAKE flow, temporary pairing listener
-internal/netx/transport — mTLS server and client, offer/upload protocol
-internal/store — trusted devices file, received-items folder with cleanup
-internal/doctor — diagnostic checks
-docs/SPEC.md, docs/protocol.md, docs/troubleshooting.md, README.md
+```
+clipdrop/
+├── cmd/
+│   └── clipdrop/
+│       └── main.go                  # entry point, subcommand dispatch
+│
+├── app/                             # wires components together, startup and shutdown
+├── config/                          # config dir, settings, defaults
+├── identity/                        # device keypair, self-signed cert, fingerprint
+│
+├── platform/
+│   ├── clipboard/
+│   │   ├── clipboard.go             # interface
+│   │   ├── clipboard_real.go        # wraps golang.design/x/clipboard
+│   │   └── clipboard_fake.go        # in-memory fake for tests
+│   └── screenshots/                 # optional (M8): Mac screenshot-folder watcher
+│
+├── imaging/                         # PNG validation, size and dimension checks
+├── engine/                          # event handling, dedupe, echo prevention, policy
+│
+├── netx/
+│   ├── discovery/                   # mDNS announce and browse
+│   ├── pairing/                     # PAKE flow, temporary pairing listener
+│   └── transport/                   # mTLS server and client, offer/upload protocol
+│
+├── store/                           # trusted-devices JSON file, received-items folder
+├── doctor/                          # diagnostic checks
+│
+├── docs/
+│   ├── SPEC.md
+│   ├── protocol.md
+│   └── troubleshooting.md
+│
+├── testdata/
+├── .gitignore
+├── go.mod
+├── go.sum
+├── LICENSE
+├── Makefile
+└── README.md
+```
 
 ## 5. Device identity and trust
 - First run generates an ECDSA P-256 key and a self-signed certificate. Store both in the config dir (0600). Device ID = SHA-256 fingerprint of the certificate. Device name = hostname, editable in config.
