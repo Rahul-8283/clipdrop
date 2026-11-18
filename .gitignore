@@ -1,0 +1,59 @@
+# Binaries and build outputs
+/bin/
+/dist/
+clipdrop
+clipdrop.exe
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Test artifacts and coverage
+*.test
+*.out
+coverage.txt
+coverage.html
+profile.pprof
+
+# Go workspace and vendor (if used)
+go.work
+go.work.sum
+vendor/
+
+# Security, keys, and credentials (never commit private keys or device identities)
+*.pem
+*.key
+*.crt
+key.pem
+cert.pem
+trusted_devices.json
+
+# Local runtime directories & received clipboard items
+received/
+data/
+*.tmp
+tmp/
+
+# macOS system files
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows system files
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+[Dd]esktop.ini
+$RECYCLE.BIN/
+
+# IDEs and editors
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+*~
