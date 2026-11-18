@@ -1,4 +1,4 @@
-# Clipdrop 
+# Clipdrop
 
 > **Zero-cloud, end-to-end encrypted, peer-to-peer clipboard and screenshot synchronization between macOS and Windows over local Wi-Fi.**
 
@@ -6,29 +6,30 @@
 
 ### Tech Stack & Core Libraries
 
-<p align="left">
-  <img src="https://img.shields.io/badge/Go-1.22+-00ADD8?style=for-the-badge&logo=go&logoColor=white" alt="Go" />
-  <img src="https://img.shields.io/badge/macOS-Darwin-000000?style=for-the-badge&logo=apple&logoColor=white" alt="macOS" />
-  <img src="https://img.shields.io/badge/Windows-11%20%2F%2010-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows" />
-  <img src="https://img.shields.io/badge/Security-mTLS%201.3%20%2B%20ECDSA-green?style=for-the-badge&logo=shield" alt="mTLS 1.3" />
-  <img src="https://img.shields.io/badge/Pairing-PAKE%20(schollz/pake)-orange?style=for-the-badge&logo=auth0&logoColor=white" alt="PAKE" />
-  <img src="https://img.shields.io/badge/Discovery-mDNS%20Zeroconf-blue?style=for-the-badge&logo=airplayvideo" alt="mDNS Zeroconf" />
-  <img src="https://img.shields.io/badge/Logging-log%2Fslog-lightgrey?style=for-the-badge&logo=codeforces" alt="slog" />
-</p>
+| Layer | Technology |
+|---|---|
+| Language | Go 1.22+ |
+| Clipboard | golang.design/x/clipboard (cgo on macOS, Win32 on Windows) |
+| Discovery | grandcat/zeroconf (mDNS) |
+| Pairing | schollz/pake v3 (PAKE) |
+| Transport | net/http over mTLS 1.3 (stdlib crypto/tls, crypto/x509, crypto/ecdsa) |
+| Storage | JSON files in os.UserConfigDir() / clipdrop (0600 permissions) |
+| Logging | log/slog |
+| Testing | go test -race |
 
 ---
 
-## 🌟 Highlights
+## Highlights
 
-- **🔒 Zero Cloud & Zero Telemetry:** Direct P2P transfer over local subnet; no accounts, no relays, no third parties.
-- **🛡️ Mutual TLS 1.3 & Pinned Fingerprints:** Custom CA-less trust model. Unpaired peers are dropped at the TLS handshake.
-- **🤝 PAKE Out-of-Band Pairing:** 2-minute time-limited pairing code using Password-Authenticated Key Exchange with AES-GCM credential exchange.
-- **🔄 Smart Echo Loop Prevention:** Content hashing (SHA-256) and receiver origin tracking guarantee zero ping-pong copy loops.
-- **📸 Screenshot-First Design:** Instant PNG validation, size checks, and sub-2-second sync across platforms.
+- **Zero Cloud & Zero Telemetry:** Direct P2P transfer over local subnet; no accounts, no relays, no third parties.
+- **Mutual TLS 1.3 & Pinned Fingerprints:** Custom CA-less trust model. Unpaired peers are dropped at the TLS handshake.
+- **PAKE Out-of-Band Pairing:** 2-minute time-limited pairing code using Password-Authenticated Key Exchange with AES-GCM credential exchange.
+- **Smart Echo Loop Prevention:** Content hashing (SHA-256) and receiver origin tracking guarantee zero ping-pong copy loops.
+- **Screenshot-First Design:** Instant PNG validation, size checks, and sub-2-second sync across platforms.
 
 ---
 
-## 🏛️ System Architecture
+## System Architecture
 
 ```mermaid
 flowchart TB
@@ -93,7 +94,7 @@ flowchart TB
 
 ---
 
-## 🤝 Pairing Protocol (PAKE + Credential Exchange)
+## Pairing Protocol (PAKE + Credential Exchange)
 
 Before normal synchronization begins, devices establish trust using a temporary pairing listener and Password-Authenticated Key Exchange (PAKE).
 
@@ -135,7 +136,7 @@ sequenceDiagram
 
 ---
 
-## ⚡ Sync Protocol & Echo Prevention
+## Sync Protocol & Echo Prevention
 
 The sync engine follows an **Offer / Upload** sequence with strict hash recording to prevent infinite feedback loops.
 
@@ -166,14 +167,14 @@ sequenceDiagram
         EngineB->>EngineB: Validate PNG header/dimensions (for images)
         EngineB->>EngineB: Record HashX as LastReceivedHash
         EngineB->>DestClip: Write content to OS Clipboard
-        EngineB->>EngineB: Archive in ~/received/ (keep newest 20)
+        EngineB->>EngineB: Archive in received/ (keep newest 20)
         TransportB-->>TransportA: 200 OK {"status": "applied"}
     end
 ```
 
 ---
 
-## 🔄 Engine State & Decision Machine
+## Engine State & Decision Machine
 
 ```mermaid
 stateDiagram-v2
@@ -181,7 +182,7 @@ stateDiagram-v2
 
     Idle --> Detecting: Clipboard Event
     Detecting --> Inspecting: Read Content (Text / Image)
-    
+
     Inspecting --> Suppressed: Hash equals LastReceivedHash (Echo)
     Inspecting --> Suppressed: Size exceeds limit (Image > 25MB, Text > 1MB)
     Inspecting --> Suppressed: Flag restricted (--images-only / --no-text)
@@ -189,17 +190,17 @@ stateDiagram-v2
 
     Inspecting --> ResolvingPeers: Valid New Content
     ResolvingPeers --> Idle: No peers online (Drop)
-    
+
     ResolvingPeers --> Offering: Peer Found (mDNS / LastAddress)
     Offering --> Idle: Peer returned "skip"
     Offering --> Uploading: Peer returned "send"
-    
+
     Uploading --> Idle: Transfer Complete & Confirmed
 ```
 
 ---
 
-## 🔐 Security & Identity Architecture
+## Security & Identity Architecture
 
 ```mermaid
 flowchart LR
@@ -226,7 +227,7 @@ flowchart LR
 
 ---
 
-## 🗂️ Project Structure
+## Project Structure
 
 ```mermaid
 flowchart TD
@@ -263,7 +264,7 @@ flowchart TD
 
 ---
 
-## 💻 CLI Commands & Usage
+## CLI Commands & Usage
 
 | Command | Description |
 |---|---|
@@ -284,6 +285,6 @@ flowchart TD
 
 ---
 
-## 📄 License
+## License
 
-This project is licensed under the [MIT License](file:///Users/rahulls/Projects/Screenshot_Sync/Clipdrop/LICENSE).
+This project is licensed under the [MIT License](LICENSE).
