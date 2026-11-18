@@ -6,16 +6,15 @@
 
 ### Tech Stack & Core Libraries
 
-| Layer | Technology |
-|---|---|
-| Language | Go 1.22+ |
-| Clipboard | golang.design/x/clipboard (cgo on macOS, Win32 on Windows) |
-| Discovery | grandcat/zeroconf (mDNS) |
-| Pairing | schollz/pake v3 (PAKE) |
-| Transport | net/http over mTLS 1.3 (stdlib crypto/tls, crypto/x509, crypto/ecdsa) |
-| Storage | JSON files in os.UserConfigDir() / clipdrop (0600 permissions) |
-| Logging | log/slog |
-| Testing | go test -race |
+<p align="left">
+  <img src="https://img.shields.io/badge/Go-1.22+-00ADD8?style=for-the-badge&logo=go&logoColor=white" alt="Go" />
+  <img src="https://img.shields.io/badge/macOS-Darwin-000000?style=for-the-badge&logo=apple&logoColor=white" alt="macOS" />
+  <img src="https://img.shields.io/badge/Windows-11%20%2F%2010-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows" />
+  <img src="https://img.shields.io/badge/Security-mTLS%201.3%20%2B%20ECDSA-green?style=for-the-badge&logo=shield" alt="mTLS 1.3" />
+  <img src="https://img.shields.io/badge/Pairing-PAKE%20(schollz/pake)-orange?style=for-the-badge&logo=auth0&logoColor=white" alt="PAKE" />
+  <img src="https://img.shields.io/badge/Discovery-mDNS%20Zeroconf-blue?style=for-the-badge&logo=airplayvideo" alt="mDNS Zeroconf" />
+  <img src="https://img.shields.io/badge/Logging-log%2Fslog-lightgrey?style=for-the-badge&logo=codeforces" alt="slog" />
+</p>
 
 ---
 
