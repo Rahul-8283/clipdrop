@@ -1,8 +1,8 @@
 # Binaries and build outputs
 /bin/
 /dist/
-clipdrop
-clipdrop.exe
+/clipdrop
+/clipdrop.exe
 *.exe
 *.dll
 *.so
