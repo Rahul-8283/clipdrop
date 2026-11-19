@@ -1,4 +1,4 @@
-package config_test
+package test
 
 import (
 	"log/slog"
@@ -198,5 +198,5 @@ func TestCheckPerms_SkipsOnWindows(t *testing.T) {
 	tmp := t.TempDir()
 	buf := captureSlogWarnings(t)
 	config.CheckPerms(tmp) // must not panic on any platform
-	_ = buf               // no assertion required; absence of panic is the test
+	_ = buf                // no assertion required; absence of panic is the test
 }
