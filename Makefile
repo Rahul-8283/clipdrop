@@ -1,0 +1,2 @@
+# Clipdrop Makefile
+
