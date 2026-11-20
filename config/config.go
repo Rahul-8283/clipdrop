@@ -52,8 +52,8 @@ func Defaults() Config {
 	return Config{
 		Port:              47820,
 		DeviceName:        hostname,
-		MaxImageBytes:     26_214_400,       // 25 MB
-		MaxTextBytes:      1_048_576,        // 1 MB
+		MaxImageBytes:     26_214_400, // 25 MB
+		MaxTextBytes:      1_048_576,  // 1 MB
 		HeartbeatInterval: 5 * time.Second,
 		ConnectTimeout:    3 * time.Second,
 		OfferTimeout:      3 * time.Second,
@@ -62,7 +62,8 @@ func Defaults() Config {
 }
 
 // Dir returns the platform-correct Clipdrop configuration directory path.
-// It delegates to os.UserConfigDir() so the result is:
+// If the CLIPDROP_CONFIG_DIR environment variable is set, it takes precedence.
+// Otherwise, it delegates to os.UserConfigDir() so the default result is:
 //
 //	macOS   → ~/Library/Application Support/clipdrop
 //	Windows → %AppData%\Roaming\clipdrop
@@ -70,6 +71,9 @@ func Defaults() Config {
 //
 // Dir does not create or validate the directory — call EnsureDir for that.
 func Dir() (string, error) {
+	if custom := os.Getenv("CLIPDROP_CONFIG_DIR"); custom != "" {
+		return custom, nil
+	}
 	base, err := os.UserConfigDir()
 	if err != nil {
 		return "", err
