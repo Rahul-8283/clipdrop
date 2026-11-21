@@ -207,3 +207,57 @@ func TestEngine_RunLifecycle(t *testing.T) {
 		t.Fatal("Run did not exit promptly after context cancel")
 	}
 }
+
+func TestEngine_ConcurrentCopiesAndApplies(t *testing.T) {
+	eng, fake := newTestEngine(t)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go func() {
+		_ = eng.Run(ctx)
+	}()
+
+	// Allow engine loop to register its watcher
+	time.Sleep(50 * time.Millisecond)
+
+	// Consume outbound events in background to prevent buffer fill
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-eng.Outbound():
+			}
+		}
+	}()
+
+	// Concurrent copies and inbound applies
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		for i := 0; i < 50; i++ {
+			// Simulate local copy
+			_ = fake.Write(&clipboard.Item{
+				Kind: clipboard.KindText,
+				Data: []byte("local copy"),
+				Mime: "text/plain; charset=utf-8",
+			})
+
+			// Simulate simultaneous inbound peer apply
+			peerData := []byte("peer item")
+			_ = eng.ApplyInbound(&clipboard.Item{
+				Kind: clipboard.KindText,
+				Data: peerData,
+				Mime: "text/plain; charset=utf-8",
+			}, engine.ComputeHash(peerData))
+		}
+	}()
+
+	select {
+	case <-done:
+		// Success: no data races or deadlocks
+	case <-time.After(5 * time.Second):
+		t.Fatal("concurrent copies and applies timed out")
+	}
+}
