@@ -118,6 +118,11 @@ func (s *Server) Stop(ctx context.Context) error {
 	return s.httpSrv.Shutdown(ctx)
 }
 
+// Close immediately halts the server and closes all active listeners and connections.
+func (s *Server) Close() error {
+	return s.httpSrv.Close()
+}
+
 // handlePing processes GET /v1/ping requests.
 func (s *Server) handlePing(w http.ResponseWriter, r *http.Request) {
 	if r.Header.Get(HeaderProtoVersion) != ProtoVersion {
