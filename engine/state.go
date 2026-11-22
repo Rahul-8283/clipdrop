@@ -8,6 +8,7 @@ type SyncState struct {
 	mu               sync.RWMutex
 	lastReceivedHash string
 	lastSentHash     string
+	currentLocalHash string
 }
 
 // NewSyncState constructs an empty, initialized SyncState.
@@ -21,6 +22,7 @@ func (s *SyncState) SetLastReceived(hash string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.lastReceivedHash = hash
+	s.currentLocalHash = hash
 }
 
 // IsLastReceived returns true if hash matches the item most recently applied from a peer.
@@ -39,6 +41,7 @@ func (s *SyncState) SetLastSent(hash string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.lastSentHash = hash
+	s.currentLocalHash = hash
 }
 
 // IsLastSent returns true if hash matches the item most recently dispatched outbound.
@@ -50,4 +53,18 @@ func (s *SyncState) IsLastSent(hash string) bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.lastSentHash == hash
+}
+
+// SetCurrentLocal records the SHA-256 hash of the currently active local clipboard content.
+func (s *SyncState) SetCurrentLocal(hash string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.currentLocalHash = hash
+}
+
+// CurrentLocalHash returns the SHA-256 hash of the currently active local clipboard content.
+func (s *SyncState) CurrentLocalHash() string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.currentLocalHash
 }
