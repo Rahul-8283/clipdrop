@@ -178,9 +178,9 @@ test/
 
 ## Acceptance Criteria Checklist
 
-- [ ] All cryptographic code uses standard library `crypto/ecdsa`, `crypto/x509`, `crypto/tls`, `crypto/sha256`. No third-party crypto libraries.
-- [ ] Strict TLS 1.3 pinning: unlisted certificates are dropped during the TLS handshake.
-- [ ] Key and cert files strictly observe `0600` filesystem permissions.
-- [ ] Atomic file writes protect `trusted_devices.json` against corruption.
-- [ ] All unit and loopback integration tests pass with `go test -race -v ./test/...`.
-- [ ] Binary compiles cleanly with `make build`.
+- [x] All cryptographic code uses standard library `crypto/ecdsa`, `crypto/x509`, `crypto/tls`, `crypto/sha256`. No third-party crypto libraries.
+- [x] Strict TLS 1.3 pinning: unlisted certificates are dropped during the TLS handshake.
+- [x] Key and cert files strictly observe `0600` filesystem permissions.
+- [x] Atomic file writes protect `trusted_devices.json` against corruption.
+- [x] All unit and loopback integration tests pass with `go test -race -v ./test/...`.
+- [x] Binary compiles cleanly with `make build`.
