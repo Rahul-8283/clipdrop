@@ -2,6 +2,7 @@ package test
 
 import (
 	"context"
+	"errors"
 	"io"
 	"os"
 	"runtime"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/Rahul-8283/clipdrop/app"
 	"github.com/Rahul-8283/clipdrop/config"
+	"github.com/Rahul-8283/clipdrop/platform/clipboard"
 )
 
 // captureStdout redirects os.Stdout to an in-memory pipe for the duration
@@ -76,7 +78,6 @@ func TestStubs_AllReturnNil(t *testing.T) {
 		name string
 		fn   func(context.Context, *config.Config) error
 	}{
-		{"RunSync", app.RunSync},
 		{"RunPairHost", app.RunPairHost},
 		{"RunPairJoin", app.RunPairJoin},
 		{"RunDevices", app.RunDevices},
@@ -93,7 +94,18 @@ func TestStubs_AllReturnNil(t *testing.T) {
 	}
 }
 
-// TestStubs_ResepctCancelledContext verifies that all stubs return when
+func TestRunSync_CancelledContext(t *testing.T) {
+	cfg := config.Defaults()
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	err := app.RunSync(ctx, &cfg)
+	if err != nil && !errors.Is(err, clipboard.ErrUnavailable) {
+		t.Fatalf("RunSync failed on cancelled context: %v", err)
+	}
+}
+
+// TestStubs_RespectCancelledContext verifies that all stubs return when
 // their context is already cancelled — they must not block.
 func TestStubs_RespectCancelledContext(t *testing.T) {
 	cfg := config.Defaults()
@@ -104,7 +116,6 @@ func TestStubs_RespectCancelledContext(t *testing.T) {
 		name string
 		fn   func(context.Context, *config.Config) error
 	}{
-		{"RunSync", app.RunSync},
 		{"RunPairHost", app.RunPairHost},
 		{"RunPairJoin", app.RunPairJoin},
 		{"RunDevices", app.RunDevices},

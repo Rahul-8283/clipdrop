@@ -7,6 +7,8 @@ import (
 	"runtime"
 
 	"github.com/Rahul-8283/clipdrop/config"
+	"github.com/Rahul-8283/clipdrop/engine"
+	"github.com/Rahul-8283/clipdrop/platform/clipboard"
 )
 
 // Version metadata injected at compile time via -ldflags.
@@ -37,10 +39,40 @@ func PrintVersion() {
 }
 
 // RunSync is the entry point for "clipdrop run".
-// It will start the full bidirectional clipboard sync daemon in Phase 4.
+// It initializes the host clipboard watcher, connects it to the engine,
+// and logs local clipboard events in the foreground until cancelled.
 func RunSync(ctx context.Context, cfg *config.Config) error {
-	slog.Info("run: starting sync daemon (not yet implemented)")
-	return nil
+	clip, err := clipboard.NewReal()
+	if err != nil {
+		return fmt.Errorf("initializing clipboard: %w", err)
+	}
+
+	eng := engine.New(cfg, clip)
+	slog.Info("sync: watching clipboard in foreground",
+		"images_only", cfg.ImagesOnly,
+		"device", cfg.DeviceName,
+	)
+
+	// Consume and log outbound events from the engine pipeline
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case evt, ok := <-eng.Outbound():
+				if !ok {
+					return
+				}
+				slog.Info("clipboard event",
+					"kind", evt.Item.Kind,
+					"size", len(evt.Item.Data),
+					"hash", evt.Hash,
+				)
+			}
+		}
+	}()
+
+	return eng.Run(ctx)
 }
 
 // RunPairHost is the entry point for "clipdrop pair".
