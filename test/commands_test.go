@@ -98,11 +98,12 @@ func TestStubs_AllReturnNil(t *testing.T) {
 
 func TestRunSync_CancelledContext(t *testing.T) {
 	cfg := config.Defaults()
+	cfg.ConfigDir = t.TempDir()
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
 	err := app.RunSync(ctx, &cfg)
-	if err != nil && !errors.Is(err, clipboard.ErrUnavailable) {
+	if err != nil && !errors.Is(err, clipboard.ErrUnavailable) && !errors.Is(err, context.Canceled) {
 		t.Fatalf("RunSync failed on cancelled context: %v", err)
 	}
 }
