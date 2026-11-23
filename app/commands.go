@@ -1,11 +1,14 @@
 package app
 
 import (
+	"bufio"
 	"context"
 	"errors"
 	"fmt"
 	"io"
 	"log/slog"
+	"net"
+	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -15,8 +18,12 @@ import (
 
 	"github.com/Rahul-8283/clipdrop/config"
 	"github.com/Rahul-8283/clipdrop/engine"
+	"github.com/Rahul-8283/clipdrop/identity"
+	"github.com/Rahul-8283/clipdrop/netx/discovery"
+	"github.com/Rahul-8283/clipdrop/netx/pairing"
 	"github.com/Rahul-8283/clipdrop/platform/clipboard"
 	"github.com/Rahul-8283/clipdrop/store"
+	"github.com/grandcat/zeroconf"
 )
 
 // Version metadata injected at compile time via -ldflags.
@@ -84,17 +91,188 @@ func RunSync(ctx context.Context, cfg *config.Config) error {
 }
 
 // RunPairHost is the entry point for "clipdrop pair".
-// It will start the host-side pairing ceremony in Phase 4.
+// It generates a pairing code, announces presence on mDNS with status=pairing,
+// displays the code banner, and waits for a peer to complete the PAKE ceremony.
 func RunPairHost(ctx context.Context, cfg *config.Config) error {
-	slog.Info("pair: starting host pairing mode (not yet implemented)")
+	return RunPairHostTo(ctx, cfg, os.Stdout, nil)
+}
+
+// RunPairHostTo starts the pairing host with custom output and optional listener.
+func RunPairHostTo(ctx context.Context, cfg *config.Config, out io.Writer, listener net.Listener) error {
+	configDir := cfg.ConfigDir
+	if configDir == "" {
+		var err error
+		configDir, err = config.Dir()
+		if err != nil {
+			return fmt.Errorf("resolving config directory: %w", err)
+		}
+	}
+
+	ident, err := identity.LoadOrGenerate(configDir, cfg.DeviceName)
+	if err != nil {
+		return fmt.Errorf("loading device identity: %w", err)
+	}
+
+	st, err := store.New(filepath.Join(configDir, "trusted_devices.json"))
+	if err != nil {
+		return fmt.Errorf("loading trusted devices store: %w", err)
+	}
+
+	code, err := pairing.GenerateCode()
+	if err != nil {
+		return fmt.Errorf("generating pairing code: %w", err)
+	}
+
+	var host *pairing.Host
+	if listener != nil {
+		host, err = pairing.NewHostWithListener(code, ident, st, listener)
+	} else {
+		host, err = pairing.NewHost(code, ident, st)
+	}
+	if err != nil {
+		return fmt.Errorf("starting pairing server: %w", err)
+	}
+	defer host.Close()
+
+	// Announce pairing state via mDNS
+	announcer, annErr := discovery.Announce(ctx, ident, host.Port(), discovery.StatusPairing)
+	if announcer != nil {
+		defer announcer.Shutdown()
+	}
+	if annErr != nil {
+		slog.Debug("mdns pairing announcement unavailable", "err", annErr)
+	}
+
+	// Print pairing banner
+	fmt.Fprintln(out, "==================================================")
+	fmt.Fprintf(out, "  Pairing Code:  %s\n", code)
+	fmt.Fprintln(out, "  Expires in:    2 minutes")
+	fmt.Fprintln(out, "  Waiting for peer to join...")
+	fmt.Fprintln(out, "==================================================")
+
+	dev, err := host.Serve(ctx)
+	if err != nil {
+		return err
+	}
+
+	slog.Info("Paired with " + dev.Name)
+	fmt.Fprintf(out, "Paired with %s\n", dev.Name)
 	return nil
 }
 
 // RunPairJoin is the entry point for "clipdrop pair join".
-// It will start the joiner-side pairing ceremony in Phase 4.
+// It acquires the pairing code, discovers the host, and completes the PAKE handshake.
 func RunPairJoin(ctx context.Context, cfg *config.Config) error {
-	slog.Info("pair join: starting joiner mode (not yet implemented)")
+	return RunPairJoinWithStreams(ctx, cfg, os.Stdin, os.Stdout, nil)
+}
+
+// RunPairJoinWithStreams executes the joiner flow with custom I/O and optional http.Client.
+func RunPairJoinWithStreams(ctx context.Context, cfg *config.Config, in io.Reader, out io.Writer, client *http.Client) error {
+	configDir := cfg.ConfigDir
+	if configDir == "" {
+		var err error
+		configDir, err = config.Dir()
+		if err != nil {
+			return fmt.Errorf("resolving config directory: %w", err)
+		}
+	}
+
+	ident, err := identity.LoadOrGenerate(configDir, cfg.DeviceName)
+	if err != nil {
+		return fmt.Errorf("loading device identity: %w", err)
+	}
+
+	st, err := store.New(filepath.Join(configDir, "trusted_devices.json"))
+	if err != nil {
+		return fmt.Errorf("loading trusted devices store: %w", err)
+	}
+
+	// 1. Determine code from CLI argument or prompt operator
+	var code string
+	for i := 1; i < len(os.Args); i++ {
+		if os.Args[i] == "join" && i+1 < len(os.Args) && !strings.HasPrefix(os.Args[i+1], "-") {
+			code = os.Args[i+1]
+			break
+		}
+	}
+
+	if code == "" && in != nil {
+		fmt.Fprint(out, "Enter pairing code: ")
+		scanner := bufio.NewScanner(in)
+		if scanner.Scan() {
+			code = strings.TrimSpace(scanner.Text())
+		}
+	}
+
+	normCode := pairing.NormalizeCode(code)
+	if normCode == "" {
+		return errors.New("pairing code is required")
+	}
+
+	// 2. Discover host address
+	hostAddr := strings.TrimSpace(cfg.PeerAddr)
+	if hostAddr == "" {
+		fmt.Fprintln(out, "Searching local network for pairing host...")
+		var err error
+		hostAddr, err = discoverPairingHost(ctx)
+		if err != nil {
+			return err
+		}
+	}
+
+	// 3. Perform PAKE handshake and AES-GCM credential swap
+	var dev *store.Device
+	if client != nil {
+		dev, err = pairing.JoinWithHTTPClient(ctx, hostAddr, normCode, ident, st, client)
+	} else {
+		dev, err = pairing.Join(ctx, hostAddr, normCode, ident, st)
+	}
+
+	if err != nil {
+		return fmt.Errorf("pairing failed: %w", err)
+	}
+
+	slog.Info("Paired with " + dev.Name)
+	fmt.Fprintf(out, "Paired with %s\n", dev.Name)
 	return nil
+}
+
+func discoverPairingHost(ctx context.Context) (string, error) {
+	res, err := zeroconf.NewResolver(nil)
+	if err != nil {
+		return "", fmt.Errorf("creating discovery resolver: %w", err)
+	}
+
+	entries := make(chan *zeroconf.ServiceEntry, 16)
+	browseCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	go func() {
+		_ = res.Browse(browseCtx, discovery.ServiceType, discovery.Domain, entries)
+	}()
+
+	for {
+		select {
+		case <-browseCtx.Done():
+			return "", errors.New("discovery: timed out looking for pairing host (is 'clipdrop pair' running on host?)")
+		case entry, ok := <-entries:
+			if !ok {
+				return "", errors.New("discovery: no pairing hosts found on local network")
+			}
+			rec := discovery.ParseTXT(entry.Text)
+			if rec.Status == discovery.StatusPairing {
+				var ip net.IP
+				if len(entry.AddrIPv4) > 0 {
+					ip = entry.AddrIPv4[0]
+				} else if len(entry.AddrIPv6) > 0 {
+					ip = entry.AddrIPv6[0]
+				}
+				if ip != nil {
+					return fmt.Sprintf("%s:%d", ip.String(), entry.Port), nil
+				}
+			}
+		}
+	}
 }
 
 // RunDevices is the entry point for "clipdrop devices".

@@ -249,7 +249,7 @@ test/
 - [x] Phonetic pairing code adheres to `NNNN-word-word` format.
 - [x] Ephemeral pairing server enforces 120-second timeout and 3-attempt brute-force lockout.
 - [x] PAKE handshake uses `schollz/pake/v3` with Curve P-256 and AES-256-GCM.
-- [ ] `clipdrop pair` and `clipdrop pair join` successfully link two nodes and write mutually trusted records.
+- [x] `clipdrop pair` and `clipdrop pair join` successfully link two nodes and write mutually trusted records.
 - [x] `clipdrop devices` prints formatted table of paired peers.
 - [x] `clipdrop unpair <name>` immediately revokes peer trust.
 - [x] mDNS discovery broadcasts and browses `_clipdrop._tcp` records using `grandcat/zeroconf`.
