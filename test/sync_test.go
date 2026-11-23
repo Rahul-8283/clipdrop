@@ -238,6 +238,52 @@ func TestSync_OfflinePeer_ItemDropped(t *testing.T) {
 
 	// Give dispatch worker time to drop item cleanly
 	time.Sleep(150 * time.Millisecond)
+
+	// Now bring a second peer online dynamically
+	nodeB := createSyncNode(t, "dynamic-laptop", 47844)
+	_ = nodeA.store.Add(&store.Device{
+		ID:          nodeB.ident.DeviceID,
+		Name:        nodeB.name,
+		OS:          "windows",
+		LastAddress: "dynamic-laptop.local:47844",
+	})
+	_ = nodeB.store.Add(&store.Device{
+		ID:          nodeA.ident.DeviceID,
+		Name:        nodeA.name,
+		OS:          "darwin",
+		LastAddress: "mac-standalone.local:47842",
+	})
+
+	clientA := connectSyncClient(nodeA, nodeB)
+	nodeA.pipeline.SetClient(clientA)
+	nodeA.pipeline.Resolver().UpdateFromMDNS(nodeB.ident.DeviceID, nodeB.name, discovery.StatusReady, "dynamic-laptop.local:47844")
+
+	go func() { _ = nodeB.pipeline.Run(ctx) }()
+	time.Sleep(100 * time.Millisecond)
+
+	// When peer comes online, new copies must sync immediately
+	newMsg := "syncing after peer came online"
+	newItem := &clipboard.Item{
+		Kind: clipboard.KindText,
+		Data: []byte(newMsg),
+		Mime: "text/plain; charset=utf-8",
+	}
+	if err := nodeA.fakeClip.Write(newItem); err != nil {
+		t.Fatalf("failed to write new clipboard item: %v", err)
+	}
+
+	var syncedItem *clipboard.Item
+	for i := 0; i < 40; i++ {
+		time.Sleep(50 * time.Millisecond)
+		item, err := nodeB.fakeClip.Read()
+		if err == nil && item != nil && string(item.Data) == newMsg {
+			syncedItem = item
+			break
+		}
+	}
+	if syncedItem == nil {
+		t.Fatal("nodeB failed to receive synced item after coming online")
+	}
 }
 
 func TestSync_TeardownBudget(t *testing.T) {
