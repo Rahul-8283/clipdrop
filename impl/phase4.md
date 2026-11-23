@@ -252,8 +252,8 @@ test/
 - [ ] `clipdrop pair` and `clipdrop pair join` successfully link two nodes and write mutually trusted records.
 - [x] `clipdrop devices` prints formatted table of paired peers.
 - [x] `clipdrop unpair <name>` immediately revokes peer trust.
-- [ ] mDNS discovery broadcasts and browses `_clipdrop._tcp` records using `grandcat/zeroconf`.
-- [ ] Address resolver strictly enforces 3-tier hierarchy (mDNS > `--peer` > store `LastAddress`).
+- [x] mDNS discovery broadcasts and browses `_clipdrop._tcp` records using `grandcat/zeroconf`.
+- [x] Address resolver strictly enforces 3-tier hierarchy (mDNS > `--peer` > store `LastAddress`).
 - [ ] Presence monitor polls every 5s with edge-triggered online/offline logging.
 - [ ] Complete sync loop delivers clipboard items bidirectionally in under 2 seconds.
 - [ ] Echo suppression prevents ping-pong loops across nodes.
