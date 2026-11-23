@@ -250,8 +250,8 @@ test/
 - [x] Ephemeral pairing server enforces 120-second timeout and 3-attempt brute-force lockout.
 - [x] PAKE handshake uses `schollz/pake/v3` with Curve P-256 and AES-256-GCM.
 - [ ] `clipdrop pair` and `clipdrop pair join` successfully link two nodes and write mutually trusted records.
-- [ ] `clipdrop devices` prints formatted table of paired peers.
-- [ ] `clipdrop unpair <name>` immediately revokes peer trust.
+- [x] `clipdrop devices` prints formatted table of paired peers.
+- [x] `clipdrop unpair <name>` immediately revokes peer trust.
 - [ ] mDNS discovery broadcasts and browses `_clipdrop._tcp` records using `grandcat/zeroconf`.
 - [ ] Address resolver strictly enforces 3-tier hierarchy (mDNS > `--peer` > store `LastAddress`).
 - [ ] Presence monitor polls every 5s with edge-triggered online/offline logging.
