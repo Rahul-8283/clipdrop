@@ -148,7 +148,7 @@ test/
 
 ## Acceptance Criteria Checklist
 
-- [ ] All code strictly adheres to package boundaries (no `internal/`).
-- [ ] No external dependencies added beyond `golang.design/x/clipboard`.
-- [ ] 100% test pass rate with `go test -race -v ./test/...`.
-- [ ] Manual test on Mac: Taking a screenshot (`Cmd+Ctrl+Shift+4`) while running `./clipdrop run` logs PNG detection, dimension, and hash.
+- [x] All code strictly adheres to package boundaries (no `internal/`).
+- [x] No external dependencies added beyond `golang.design/x/clipboard`.
+- [x] 100% test pass rate with `go test -race -v ./test/...`.
+- [x] Manual test on Mac: Taking a screenshot (`Cmd+Ctrl+Shift+4`) while running `./clipdrop run` logs PNG detection, dimension, and hash.
