@@ -246,9 +246,9 @@ test/
 
 ## Acceptance Criteria Checklist
 
-- [ ] Phonetic pairing code adheres to `NNNN-word-word` format.
-- [ ] Ephemeral pairing server enforces 120-second timeout and 3-attempt brute-force lockout.
-- [ ] PAKE handshake uses `schollz/pake/v3` with Curve P-256 and AES-256-GCM.
+- [x] Phonetic pairing code adheres to `NNNN-word-word` format.
+- [x] Ephemeral pairing server enforces 120-second timeout and 3-attempt brute-force lockout.
+- [x] PAKE handshake uses `schollz/pake/v3` with Curve P-256 and AES-256-GCM.
 - [ ] `clipdrop pair` and `clipdrop pair join` successfully link two nodes and write mutually trusted records.
 - [ ] `clipdrop devices` prints formatted table of paired peers.
 - [ ] `clipdrop unpair <name>` immediately revokes peer trust.
