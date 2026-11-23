@@ -254,7 +254,7 @@ test/
 - [x] `clipdrop unpair <name>` immediately revokes peer trust.
 - [x] mDNS discovery broadcasts and browses `_clipdrop._tcp` records using `grandcat/zeroconf`.
 - [x] Address resolver strictly enforces 3-tier hierarchy (mDNS > `--peer` > store `LastAddress`).
-- [ ] Presence monitor polls every 5s with edge-triggered online/offline logging.
+- [x] Presence monitor polls every 5s with edge-triggered online/offline logging.
 - [ ] Complete sync loop delivers clipboard items bidirectionally in under 2 seconds.
 - [ ] Echo suppression prevents ping-pong loops across nodes.
 - [ ] All unit, loopback, and integration tests pass with `go test -race -v ./test/...`.
