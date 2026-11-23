@@ -7,8 +7,10 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -82,8 +84,6 @@ func TestStubs_AllReturnNil(t *testing.T) {
 		name string
 		fn   func(context.Context, *config.Config) error
 	}{
-		{"RunPairHost", app.RunPairHost},
-		{"RunPairJoin", app.RunPairJoin},
 		{"RunDoctor", app.RunDoctor},
 	}
 
@@ -118,8 +118,6 @@ func TestStubs_RespectCancelledContext(t *testing.T) {
 		name string
 		fn   func(context.Context, *config.Config) error
 	}{
-		{"RunPairHost", app.RunPairHost},
-		{"RunPairJoin", app.RunPairJoin},
 		{"RunDoctor", app.RunDoctor},
 	}
 
@@ -317,5 +315,144 @@ func TestRunUnpair_FromOSArgs(t *testing.T) {
 	os.Args = []string{"clipdrop", "unpair", "test-device"}
 	if err := app.RunUnpair(context.Background(), &cfg); err != nil {
 		t.Fatalf("RunUnpair with os.Args failed: %v", err)
+	}
+}
+
+// --- RunPairHost & RunPairJoin Tests ---
+
+func TestRunPairHost_BannerAndTimeout(t *testing.T) {
+	tmpDir := t.TempDir()
+	cfg := config.Defaults()
+	cfg.ConfigDir = tmpDir
+	cfg.DeviceName = "host-banner-node"
+
+	listener := newMemPipeListener("127.0.0.1:47835")
+	defer listener.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+
+	var out bytes.Buffer
+	err := app.RunPairHostTo(ctx, &cfg, &out, listener)
+	if err == nil {
+		t.Fatal("expected timeout error, got nil")
+	}
+
+	output := out.String()
+	if !strings.Contains(output, "Pairing Code:") || !strings.Contains(output, "Expires in:    2 minutes") || !strings.Contains(output, "Waiting for peer to join...") {
+		t.Fatalf("banner missing required content:\n%s", output)
+	}
+}
+
+func TestRunPairJoin_MissingCode(t *testing.T) {
+	tmpDir := t.TempDir()
+	cfg := config.Defaults()
+	cfg.ConfigDir = tmpDir
+	cfg.DeviceName = "joiner-node"
+
+	var out bytes.Buffer
+	err := app.RunPairJoinWithStreams(context.Background(), &cfg, strings.NewReader("\n"), &out, nil)
+	if err == nil || !strings.Contains(err.Error(), "pairing code is required") {
+		t.Fatalf("expected pairing code required error, got: %v", err)
+	}
+}
+
+type safeBuffer struct {
+	buf bytes.Buffer
+	mu  sync.Mutex
+}
+
+func (s *safeBuffer) Write(p []byte) (n int, err error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.buf.Write(p)
+}
+
+func (s *safeBuffer) String() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.buf.String()
+}
+
+func TestRunPair_HostAndJoin_Ceremony(t *testing.T) {
+	hostDir := t.TempDir()
+	hostCfg := config.Defaults()
+	hostCfg.ConfigDir = hostDir
+	hostCfg.DeviceName = "mac-host"
+
+	joinerDir := t.TempDir()
+	joinerCfg := config.Defaults()
+	joinerCfg.ConfigDir = joinerDir
+	joinerCfg.DeviceName = "win-joiner"
+
+	listener := newMemPipeListener("127.0.0.1:47836")
+	client := createMemClient(listener)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// Safe thread-safe buffer for capturing host output
+	var hostOut safeBuffer
+	hostErrCh := make(chan error, 1)
+
+	go func() {
+		err := app.RunPairHostTo(ctx, &hostCfg, &hostOut, listener)
+		hostErrCh <- err
+	}()
+
+	// Extract pairing code from host banner
+	re := regexp.MustCompile(`Pairing Code:\s+([0-9a-z\-]+)`)
+	var code string
+	for i := 0; i < 50; i++ {
+		time.Sleep(20 * time.Millisecond)
+		match := re.FindStringSubmatch(hostOut.String())
+		if len(match) > 1 {
+			code = match[1]
+			break
+		}
+	}
+	if code == "" {
+		t.Fatalf("timed out waiting for pairing code in host output:\n%s", hostOut.String())
+	}
+
+	// Join from joiner side
+	joinerCfg.PeerAddr = "127.0.0.1:47836"
+	var joinerOut bytes.Buffer
+	err := app.RunPairJoinWithStreams(ctx, &joinerCfg, strings.NewReader(code+"\n"), &joinerOut, client)
+	if err != nil {
+		t.Fatalf("RunPairJoinWithStreams failed: %v", err)
+	}
+
+	hostErr := <-hostErrCh
+	if hostErr != nil {
+		t.Fatalf("RunPairHostTo failed: %v", hostErr)
+	}
+
+	// Verify user-facing output
+	if !strings.Contains(joinerOut.String(), "Paired with mac-host") {
+		t.Errorf("joiner output missing peer name: %q", joinerOut.String())
+	}
+	if !strings.Contains(hostOut.String(), "Paired with win-joiner") {
+		t.Errorf("host output missing peer name: %q", hostOut.String())
+	}
+
+	// Verify persistence in both stores
+	hostStore, err := store.New(filepath.Join(hostDir, "trusted_devices.json"))
+	if err != nil {
+		t.Fatalf("failed to open host store: %v", err)
+	}
+	joinerStore, err := store.New(filepath.Join(joinerDir, "trusted_devices.json"))
+	if err != nil {
+		t.Fatalf("failed to open joiner store: %v", err)
+	}
+
+	hostPeers := hostStore.List()
+	if len(hostPeers) != 1 || hostPeers[0].Name != "win-joiner" {
+		t.Fatalf("host store unexpected peers: %+v", hostPeers)
+	}
+
+	joinerPeers := joinerStore.List()
+	if len(joinerPeers) != 1 || joinerPeers[0].Name != "mac-host" {
+		t.Fatalf("joiner store unexpected peers: %+v", joinerPeers)
 	}
 }
