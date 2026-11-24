@@ -16,6 +16,8 @@ import (
 
 	"github.com/Rahul-8283/clipdrop/app"
 	"github.com/Rahul-8283/clipdrop/config"
+	"github.com/Rahul-8283/clipdrop/doctor"
+	"github.com/Rahul-8283/clipdrop/identity"
 	"github.com/Rahul-8283/clipdrop/platform/clipboard"
 	"github.com/Rahul-8283/clipdrop/store"
 )
@@ -78,6 +80,10 @@ func TestPrintVersion_ExactLineCount(t *testing.T) {
 
 func TestStubs_AllReturnNil(t *testing.T) {
 	cfg := config.Defaults()
+	cfg.ConfigDir = t.TempDir()
+	_ = os.Chmod(cfg.ConfigDir, 0700)
+	_ = config.EnsureDir(cfg.ConfigDir)
+	_, _ = identity.LoadOrGenerate(cfg.ConfigDir, cfg.DeviceName)
 	ctx := context.Background()
 
 	stubs := []struct {
@@ -112,6 +118,7 @@ func TestRunSync_CancelledContext(t *testing.T) {
 // their context is already cancelled — they must not block.
 func TestStubs_RespectCancelledContext(t *testing.T) {
 	cfg := config.Defaults()
+	cfg.ConfigDir = t.TempDir()
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
@@ -125,7 +132,8 @@ func TestStubs_RespectCancelledContext(t *testing.T) {
 	for _, tc := range stubs {
 		t.Run(tc.name, func(t *testing.T) {
 			err := tc.fn(ctx, &cfg)
-			if err != nil {
+			// On cancelled context, RunDoctor must return promptly with either nil, Canceled or ErrChecksFailed
+			if err != nil && !errors.Is(err, context.Canceled) && !errors.Is(err, doctor.ErrChecksFailed) {
 				t.Errorf("%s() returned error on cancelled context: %v", tc.name, err)
 			}
 		})

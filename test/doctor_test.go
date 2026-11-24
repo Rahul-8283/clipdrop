@@ -1,6 +1,7 @@
 package test
 
 import (
+	"bytes"
 	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
@@ -9,6 +10,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"math/big"
 	"net"
@@ -16,9 +18,11 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/Rahul-8283/clipdrop/app"
 	"github.com/Rahul-8283/clipdrop/config"
 	"github.com/Rahul-8283/clipdrop/doctor"
 	"github.com/Rahul-8283/clipdrop/engine"
@@ -338,5 +342,127 @@ func TestDoctor_AllChecks_And_PlatformChecks(t *testing.T) {
 				t.Fatalf("check %s failed without remediation advice", check.Name())
 			}
 		}
+	}
+}
+
+type mockCheck struct {
+	name        string
+	status      doctor.Status
+	summary     string
+	remediation string
+}
+
+func (m *mockCheck) Name() string { return m.name }
+func (m *mockCheck) Run(_ context.Context, _ *config.Config) *doctor.Result {
+	return &doctor.Result{
+		Name:        m.name,
+		Status:      m.status,
+		Latency:     5 * time.Millisecond,
+		Summary:     m.summary,
+		Remediation: m.remediation,
+	}
+}
+
+func TestDoctor_Runner_StatusAggregation(t *testing.T) {
+	// 1. All Pass -> Overall Pass
+	rPass := doctor.NewRunner(
+		&mockCheck{name: "Check 1", status: doctor.StatusPass, summary: "ok"},
+		&mockCheck{name: "Check 2", status: doctor.StatusPass, summary: "ok"},
+	)
+	repPass := rPass.RunAll(context.Background(), nil)
+	if repPass.Overall != doctor.StatusPass {
+		t.Fatalf("expected StatusPass, got %s", repPass.Overall)
+	}
+
+	// 2. Contains Warn, no Fail -> Overall Warn
+	rWarn := doctor.NewRunner(
+		&mockCheck{name: "Check 1", status: doctor.StatusPass, summary: "ok"},
+		&mockCheck{name: "Check 2", status: doctor.StatusWarn, summary: "warning"},
+	)
+	repWarn := rWarn.RunAll(context.Background(), nil)
+	if repWarn.Overall != doctor.StatusWarn {
+		t.Fatalf("expected StatusWarn, got %s", repWarn.Overall)
+	}
+
+	// 3. Contains Fail -> Overall Fail
+	rFail := doctor.NewRunner(
+		&mockCheck{name: "Check 1", status: doctor.StatusPass, summary: "ok"},
+		&mockCheck{name: "Check 2", status: doctor.StatusWarn, summary: "warning"},
+		&mockCheck{name: "Check 3", status: doctor.StatusFail, summary: "broken"},
+	)
+	repFail := rFail.RunAll(context.Background(), nil)
+	if repFail.Overall != doctor.StatusFail {
+		t.Fatalf("expected StatusFail, got %s", repFail.Overall)
+	}
+}
+
+func TestDoctor_Printer_OutputFormatting(t *testing.T) {
+	rep := &doctor.Report{
+		Results: []*doctor.Result{
+			{Name: "Core Filesystem", Status: doctor.StatusPass, Latency: 2 * time.Millisecond, Summary: "Path exists"},
+			{Name: "Firewall Rule", Status: doctor.StatusWarn, Latency: 5 * time.Millisecond, Summary: "Rule disabled", Remediation: "Enable rule in firewall"},
+			{Name: "Identity Cert", Status: doctor.StatusFail, Latency: 10 * time.Millisecond, Summary: "Certificate expired", Remediation: "Run clipdrop run to regenerate"},
+		},
+		Overall:      doctor.StatusFail,
+		TotalLatency: 17 * time.Millisecond,
+	}
+
+	cfg := config.Defaults()
+	cfg.ConfigDir = "/tmp/test-config-dir"
+
+	var buf bytes.Buffer
+	if err := doctor.PrintReport(&buf, rep, &cfg); err != nil {
+		t.Fatalf("PrintReport failed: %v", err)
+	}
+	out := buf.String()
+
+	// Assert headers
+	if !strings.Contains(out, "Clipdrop Diagnostics (doctor)") {
+		t.Fatal("missing header title")
+	}
+	if !strings.Contains(out, "CHECK") || !strings.Contains(out, "STATUS") || !strings.Contains(out, "SUMMARY") {
+		t.Fatal("missing table column headers")
+	}
+
+	// Assert check rows
+	if !strings.Contains(out, "Core Filesystem") || !strings.Contains(out, "Path exists") {
+		t.Fatal("missing check 1 in output")
+	}
+	if !strings.Contains(out, "Firewall Rule") || !strings.Contains(out, "Identity Cert") {
+		t.Fatal("missing check rows in output")
+	}
+
+	// Assert remediation section
+	if !strings.Contains(out, "Remediation Advice:") {
+		t.Fatal("missing remediation advice header")
+	}
+	if !strings.Contains(out, "Enable rule in firewall") || !strings.Contains(out, "Run clipdrop run to regenerate") {
+		t.Fatal("missing remediation hints in output")
+	}
+
+	// Assert banner
+	if !strings.Contains(out, "Overall: ISSUES DETECTED") {
+		t.Fatalf("expected 'Overall: ISSUES DETECTED' banner, got: %s", out)
+	}
+}
+
+func TestDoctor_RunDoctor_CommandIntegration(t *testing.T) {
+	tempDir := t.TempDir()
+	_ = config.EnsureDir(tempDir)
+	_, _ = identity.LoadOrGenerate(tempDir, "doctor-test")
+
+	cfg := config.Defaults()
+	cfg.ConfigDir = tempDir
+
+	var buf bytes.Buffer
+	err := app.RunDoctorWithOutput(context.Background(), &cfg, &buf)
+	// Because on clean config dir, either all pass or only peer connectivity warns
+	if err != nil && !errors.Is(err, doctor.ErrChecksFailed) {
+		t.Fatalf("unexpected error from RunDoctorWithOutput: %v", err)
+	}
+
+	out := buf.String()
+	if !strings.Contains(out, "Clipdrop Diagnostics (doctor)") {
+		t.Fatalf("expected doctor header in output, got: %s", out)
 	}
 }
