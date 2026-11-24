@@ -31,6 +31,16 @@ func CoreChecks() []Check {
 	}
 }
 
+// AllChecks returns all diagnostic checks, combining standard core checks with OS-specific checks.
+func AllChecks() []Check {
+	all := CoreChecks()
+	platform := PlatformChecks()
+	if len(platform) > 0 {
+		all = append(all, platform...)
+	}
+	return all
+}
+
 // ConfigDirCheck validates that the configuration directory exists, is writable,
 // and enforces strict permissions (0700 on Unix).
 type ConfigDirCheck struct{}
