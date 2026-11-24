@@ -72,6 +72,7 @@ func run() error {
 		port := fs.Int("port", 47820, "mTLS listener port")
 		peer := fs.String("peer", "", "manual peer address (ip:port)")
 		verbose := fs.Bool("verbose", false, "enable debug logging")
+		watchScreenshots := fs.Bool("watch-screenshots", false, "watch macOS screenshot directory for new captures")
 
 		if err := fs.Parse(os.Args[2:]); err != nil {
 			if err == flag.ErrHelp {
@@ -87,6 +88,7 @@ func run() error {
 		cfg.Port = *port
 		cfg.PeerAddr = *peer
 		cfg.Verbose = *verbose
+		cfg.WatchScreenshots = *watchScreenshots
 
 		return a.Run(ctx, func(ctx context.Context) error {
 			return app.RunSync(ctx, &cfg)

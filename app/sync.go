@@ -17,6 +17,7 @@ import (
 	"github.com/Rahul-8283/clipdrop/netx/discovery"
 	"github.com/Rahul-8283/clipdrop/netx/transport"
 	"github.com/Rahul-8283/clipdrop/platform/clipboard"
+	"github.com/Rahul-8283/clipdrop/platform/screenshots"
 	"github.com/Rahul-8283/clipdrop/store"
 )
 
@@ -181,7 +182,17 @@ func (p *SyncPipeline) Run(ctx context.Context) error {
 	// 5. Start outbound dispatch worker
 	go p.dispatchLoop(ctx)
 
-	// 6. Run clipboard engine loop (blocks until ctx is cancelled)
+	// 6. Optional screenshot directory watcher
+	if p.cfg.WatchScreenshots {
+		go func() {
+			watcher := screenshots.NewWatcher("", p.engine)
+			if err := watcher.Start(ctx); err != nil && !errors.Is(err, context.Canceled) {
+				slog.Debug("screenshot watcher stopped", "err", err)
+			}
+		}()
+	}
+
+	// 7. Run clipboard engine loop (blocks until ctx is cancelled)
 	engineErrCh := make(chan error, 1)
 	go func() {
 		engineErrCh <- p.engine.Run(ctx)
