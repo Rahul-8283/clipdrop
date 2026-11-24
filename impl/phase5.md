@@ -196,13 +196,13 @@ test/
 
 ## Acceptance Criteria Checklist
 
-- [ ] Retention manager archives received items to `<configDir>/received/` with permissions `0700`.
-- [ ] Retention manager strictly enforces 20-item ceiling, unlinking oldest files asynchronously.
-- [ ] File naming matches `<YYYYMMDDTHHMMSSZ>_<sha256[:8]>.<png|txt>` with strict path sanitization.
-- [ ] `clipdrop doctor` executes all platform-agnostic checks (config dir, identity, store, port, mDNS, peer ping).
-- [ ] `clipdrop doctor` executes OS-specific checks (macOS pasteboard/screencapture, Windows firewall/profile).
-- [ ] `clipdrop doctor` renders an aligned, colored terminal table with actionable remediation instructions.
-- [ ] Optional macOS screenshot watcher activates via `--watch-screenshots` and debounces writes over 250ms intervals.
-- [ ] Complete technical documentation suite authored: `docs/SPEC.md`, `docs/protocol.md`, `docs/troubleshooting.md`.
-- [ ] All new and existing unit, integration, and diagnostic tests pass with `go test -race -v ./test/...`.
-- [ ] Binary compiles cleanly with `make build`.
+- [x] Retention manager archives received items to `<configDir>/received/` with permissions `0700`.
+- [x] Retention manager strictly enforces 20-item ceiling, unlinking oldest files asynchronously.
+- [x] File naming matches `<YYYYMMDDTHHMMSSZ>_<sha256[:8]>.<png|txt>` with strict path sanitization.
+- [x] `clipdrop doctor` executes all platform-agnostic checks (config dir, identity, store, port, mDNS, peer ping).
+- [x] `clipdrop doctor` executes OS-specific checks (macOS pasteboard/screencapture, Windows firewall/profile).
+- [x] `clipdrop doctor` renders an aligned, colored terminal table with actionable remediation instructions.
+- [x] Optional macOS screenshot watcher activates via `--watch-screenshots` and debounces writes over 250ms intervals.
+- [x] Complete technical documentation suite authored: `docs/SPEC.md`, `docs/protocol.md`, `docs/troubleshooting.md`.
+- [x] All new and existing unit, integration, and diagnostic tests pass with `go test -race -v ./test/...`.
+- [x] Binary compiles cleanly with `make build`.
