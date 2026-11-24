@@ -47,10 +47,12 @@ func run() error {
 			return fmt.Errorf("resolving config directory: %w", err)
 		}
 		cfg.ConfigDir = dir
-		if err := config.EnsureDir(dir); err != nil {
-			return fmt.Errorf("creating config directory: %w", err)
+		if os.Args[1] != "doctor" {
+			if err := config.EnsureDir(dir); err != nil {
+				return fmt.Errorf("creating config directory: %w", err)
+			}
+			config.CheckPerms(dir)
 		}
-		config.CheckPerms(dir)
 
 	default:
 		printUsage()
