@@ -126,7 +126,7 @@ func TestRetention_Pruning_Limit20(t *testing.T) {
 	for i := 0; i < 25; i++ {
 		filename := fmt.Sprintf("20261124T1000%02dZ_abcdef%02d.txt", i, i)
 		filePath := filepath.Join(rm.ReceivedDir(), filename)
-		if err := os.WriteFile(filePath, []byte(fmt.Sprintf("item %d", i)), 0600); err != nil {
+		if err := os.WriteFile(filePath, fmt.Appendf(nil, "item %d", i), 0600); err != nil {
 			t.Fatalf("failed to create dummy file: %v", err)
 		}
 		// Set increasing modification times
