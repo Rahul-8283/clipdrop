@@ -29,6 +29,7 @@ type Server struct {
 	ident     *identity.Identity
 	store     *store.Store
 	eng       *engine.Engine
+	retention *store.RetentionManager
 	listener  net.Listener
 	httpSrv   *http.Server
 	startOnce sync.Once
@@ -65,12 +66,18 @@ func NewServerWithListener(cfg *config.Config, ident *identity.Identity, st *sto
 		return nil, errors.New("server: all arguments are required")
 	}
 
+	var retention *store.RetentionManager
+	if cfg.ConfigDir != "" {
+		retention = store.NewRetentionManager(cfg.ConfigDir)
+	}
+
 	s := &Server{
-		cfg:      cfg,
-		ident:    ident,
-		store:    st,
-		eng:      eng,
-		listener: listener,
+		cfg:       cfg,
+		ident:     ident,
+		store:     st,
+		eng:       eng,
+		retention: retention,
+		listener:  listener,
 	}
 
 	mux := http.NewServeMux()
@@ -99,6 +106,16 @@ func (s *Server) Addr() net.Addr {
 // Handler returns the HTTP handler backing the server endpoints.
 func (s *Server) Handler() http.Handler {
 	return s.httpSrv.Handler
+}
+
+// RetentionManager returns the attached RetentionManager, if configured.
+func (s *Server) RetentionManager() *store.RetentionManager {
+	return s.retention
+}
+
+// SetRetentionManager configures or overrides the retention manager on the server.
+func (s *Server) SetRetentionManager(rm *store.RetentionManager) {
+	s.retention = rm
 }
 
 // Start initiates the server's HTTP accept loop in a background goroutine.
@@ -289,6 +306,14 @@ func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 		slog.Error("server: failed to apply inbound clipboard item", "err", err)
 		http.Error(w, "failed to write item to clipboard", http.StatusInternalServerError)
 		return
+	}
+
+	if s.retention != nil {
+		go func() {
+			if _, err := s.retention.Archive(string(kind), data, computedSha); err != nil {
+				slog.Debug("retention: archive error", "err", err)
+			}
+		}()
 	}
 
 	w.WriteHeader(http.StatusOK)
