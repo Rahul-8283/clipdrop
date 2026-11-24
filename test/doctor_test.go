@@ -320,3 +320,23 @@ func TestDoctor_PeerConnectivityCheck(t *testing.T) {
 		t.Fatalf("expected StatusPass when peer reachable, got %s: %s", resReachable.Status, resReachable.Summary)
 	}
 }
+
+func TestDoctor_AllChecks_And_PlatformChecks(t *testing.T) {
+	all := doctor.AllChecks()
+	if len(all) < 6 {
+		t.Fatalf("expected at least 6 core checks, got %d", len(all))
+	}
+
+	platform := doctor.PlatformChecks()
+	if runtime.GOOS == "darwin" {
+		if len(platform) != 2 {
+			t.Fatalf("expected 2 macOS platform checks, got %d", len(platform))
+		}
+		for _, check := range platform {
+			res := check.Run(context.Background(), nil)
+			if res.Status == doctor.StatusFail && res.Remediation == "" {
+				t.Fatalf("check %s failed without remediation advice", check.Name())
+			}
+		}
+	}
+}
