@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/Rahul-8283/clipdrop/config"
+	"github.com/Rahul-8283/clipdrop/doctor"
 	"github.com/Rahul-8283/clipdrop/identity"
 	"github.com/Rahul-8283/clipdrop/netx/discovery"
 	"github.com/Rahul-8283/clipdrop/netx/pairing"
@@ -419,8 +420,23 @@ func formatRelativeTime(t time.Time) string {
 }
 
 // RunDoctor is the entry point for "clipdrop doctor".
-// It will run system and network diagnostics in Phase 5.
+// It executes system and network diagnostics, prints a formatted health report to stdout,
+// and returns an error if any critical check fails.
 func RunDoctor(ctx context.Context, cfg *config.Config) error {
-	slog.Info("doctor: running diagnostics (not yet implemented)")
+	return RunDoctorWithOutput(ctx, cfg, os.Stdout)
+}
+
+// RunDoctorWithOutput executes diagnostics and renders results to the provided writer.
+func RunDoctorWithOutput(ctx context.Context, cfg *config.Config, out io.Writer) error {
+	runner := doctor.NewRunner()
+	report := runner.RunAll(ctx, cfg)
+
+	if err := doctor.PrintReport(out, report, cfg); err != nil {
+		return fmt.Errorf("rendering doctor report: %w", err)
+	}
+
+	if report.Overall == doctor.StatusFail {
+		return doctor.ErrChecksFailed
+	}
 	return nil
 }

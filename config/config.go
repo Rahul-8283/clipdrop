@@ -19,9 +19,10 @@ type Config struct {
 	PeerAddr string // manual --peer ip:port override
 
 	// Behaviour flags
-	ImagesOnly bool // --images-only: suppress text sync
-	NoText     bool // --no-text: alias for ImagesOnly
-	Verbose    bool // --verbose: elevate log level to DEBUG
+	ImagesOnly       bool // --images-only: suppress text sync
+	NoText           bool // --no-text: alias for ImagesOnly
+	Verbose          bool // --verbose: elevate log level to DEBUG
+	WatchScreenshots bool // --watch-screenshots: watch macOS screenshot folder
 
 	// Identity
 	DeviceName string // local hostname, shown to peers

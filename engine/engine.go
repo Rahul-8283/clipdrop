@@ -67,14 +67,7 @@ func (e *Engine) Run(ctx context.Context) error {
 }
 
 // ProcessLocalChange executes the outbound evaluation pipeline for a local
-// clipboard modification:
-// 1. Reads clipboard item
-// 2. Evaluates CLI policies (--images-only, --no-text)
-// 3. Validates payload (PNG format/dimensions or UTF-8 text length)
-// 4. Computes SHA-256 digest
-// 5. Echo Check: drops if hash matches last received from peer
-// 6. Dedupe Check: drops if hash matches last sent outbound
-// 7. Updates last sent hash and emits event
+// clipboard modification.
 func (e *Engine) ProcessLocalChange() {
 	item, err := e.clip.Read()
 	if err != nil {
@@ -83,6 +76,15 @@ func (e *Engine) ProcessLocalChange() {
 			return
 		}
 		slog.Debug("engine: failed to read clipboard", "err", err)
+		return
+	}
+	e.ProcessItem(item)
+}
+
+// ProcessItem evaluates and dispatches an outbound item (e.g. from local clipboard
+// or the optional screenshot directory watcher).
+func (e *Engine) ProcessItem(item *clipboard.Item) {
+	if item == nil {
 		return
 	}
 
@@ -97,7 +99,7 @@ func (e *Engine) ProcessLocalChange() {
 	case clipboard.KindImage:
 		info, err := imaging.ValidatePNG(item.Data)
 		if err != nil {
-			slog.Warn("engine: invalid image on clipboard", "err", err)
+			slog.Warn("engine: invalid image", "err", err)
 			return
 		}
 		slog.Debug("engine: validated PNG image", "width", info.Width, "height", info.Height, "size", info.Size)
