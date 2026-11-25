@@ -265,6 +265,25 @@ flowchart TD
 
 ---
 
+## Quickstart (6 Steps)
+
+1. **Prerequisites:** Install **Go 1.22+** on both your Mac and Windows laptops and ensure both devices are on the same local Wi-Fi network (with Windows Wi-Fi profile set to **Private**).
+2. **Build on macOS:**
+   ```bash
+   git clone https://github.com/Rahul-8283/clipdrop.git && cd clipdrop
+   make build
+   ```
+3. **Build on Windows (PowerShell):**
+   ```powershell
+   git clone https://github.com/Rahul-8283/clipdrop.git; cd clipdrop
+   go build -o clipdrop.exe ./cmd/clipdrop
+   ```
+4. **Verify Health (Optional):** Run `./clipdrop doctor` on each machine to confirm permissions, firewall rules, and port `47820` availability.
+5. **Pair Devices Once:** Run `./clipdrop pair` on your Mac to display a 2-minute pairing code, then run `.\clipdrop.exe pair join` on Windows and enter the code.
+6. **Start Syncing:** Run `./clipdrop run` on Mac (add `--watch-screenshots` to auto-sync saved `Cmd+Shift+4` files) and `.\clipdrop.exe run` on Windows. Copy any text or screenshot (`Cmd+Ctrl+Shift+4` / `Win+Shift+S`) and paste immediately on the other machine.
+
+---
+
 ## CLI Commands & Usage
 
 | Command | Description |
@@ -282,6 +301,7 @@ flowchart TD
 - `--no-text` : Synonym for image-exclusive synchronization.
 - `--port <number>` : Custom mTLS listening port (default: `47820`).
 - `--peer <ip:port>` : Manual fallback address if mDNS multicast is blocked on the network.
+- `--watch-screenshots` : Watch the macOS screenshot directory (`Cmd+Shift+4` saved files) and auto-sync new captures.
 - `--verbose` : Enable detailed `log/slog` debug tracing.
 
 ---

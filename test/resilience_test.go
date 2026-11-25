@@ -360,7 +360,7 @@ func TestResilience_ImageOnlyPolicyEnforcement(t *testing.T) {
 	defer cancel()
 
 	// 1. Text offer must be skipped with reason="kind_disabled"
-	txtData := []byte(fmt.Sprintf("text blocked by policy %d", time.Now().UnixNano()))
+	txtData := fmt.Appendf(nil, "text blocked by policy %d", time.Now().UnixNano())
 	txtResp, err := clientB.Offer(ctx, "imgonly-a.local:47886", &transport.OfferRequest{
 		ID:     "txt-offer-1",
 		Kind:   string(clipboard.KindText),
