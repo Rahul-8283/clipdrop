@@ -7,6 +7,8 @@
 ### Tech Stack & Core Libraries
 
 <p align="left">
+  <img src="https://img.shields.io/badge/Release-v1.0.0-brightgreen?style=for-the-badge&logo=semver&logoColor=white" alt="Release v1.0.0" />
+  <img src="https://img.shields.io/badge/Status-Production%20Ready-success?style=for-the-badge&logo=checkmarx&logoColor=white" alt="Production Ready" />
   <img src="https://img.shields.io/badge/Go-1.22+-00ADD8?style=for-the-badge&logo=go&logoColor=white" alt="Go" />
   <img src="https://img.shields.io/badge/macOS-Darwin-000000?style=for-the-badge&logo=apple&logoColor=white" alt="macOS" />
   <img src="https://img.shields.io/badge/Windows-11%20%2F%2010-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows" />
@@ -278,9 +280,23 @@ flowchart TD
    git clone https://github.com/Rahul-8283/clipdrop.git; cd clipdrop
    go build -o clipdrop.exe ./cmd/clipdrop
    ```
-4. **Verify Health (Optional):** Run `./clipdrop doctor` on each machine to confirm permissions, firewall rules, and port `47820` availability.
+4. **Allow Windows Firewall & Private Wi-Fi (Windows Admin PowerShell):**
+   If Windows → Mac works but Mac → Windows is blocked, ensure your Wi-Fi profile is **Private** and allow `clipdrop.exe` on port `47820`:
+   ```powershell
+   Get-NetConnectionProfile | Set-NetConnectionProfile -NetworkCategory Private
+   New-NetFirewallRule -DisplayName "Clipdrop" -Direction Inbound -Program "$PWD\clipdrop.exe" -Action Allow
+   ```
 5. **Pair Devices Once:** Run `./clipdrop pair` on your Mac to display a 2-minute pairing code, then run `.\clipdrop.exe pair join` on Windows and enter the code.
-6. **Start Syncing:** Run `./clipdrop run` on Mac (add `--watch-screenshots` to auto-sync saved `Cmd+Shift+4` files) and `.\clipdrop.exe run` on Windows. Copy any text or screenshot (`Cmd+Ctrl+Shift+4` / `Win+Shift+S`) and paste immediately on the other machine.
+6. **Start Syncing:** Run `./clipdrop run` on Mac (add `--watch-screenshots` for `Cmd+Shift+4` files, or `--peer <windows-ip>:47820` if mDNS multicast is filtered on campus/office Wi-Fi) and `.\clipdrop.exe run` on Windows. Copy any text or screenshot (`Cmd+Ctrl+Shift+4` / `Win+Shift+S`) and paste immediately on the other machine!
+7. **Verify Anytime:** Run `./clipdrop doctor` (or `.\clipdrop.exe doctor`) to check permissions, firewall rules, port `47820`, and peer reachability, and run `go test -race ./...` for the full test suite.
+
+---
+
+## Documentation
+
+- [System Specification](docs/SPEC.md) — Architecture, mTLS 1.3 pinning, PAKE security invariants, and concurrency model.
+- [Wire Protocol](docs/protocol.md) — REST endpoints (`/v1/ping`, `/v1/offer`, `/v1/items/{id}`), JSON schemas, and HTTP status codes.
+- [Troubleshooting Runbook](docs/troubleshooting.md) — Resolving Wi-Fi client isolation, Windows Firewall rules, and macOS permissions.
 
 ---
 
