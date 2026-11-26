@@ -267,7 +267,7 @@ flowchart TD
 
 ---
 
-## Quickstart (6 Steps)
+## Quickstart (7 Steps)
 
 1. **Prerequisites:** Install **Go 1.22+** on both your Mac and Windows laptops and ensure both devices are on the same local Wi-Fi network (with Windows Wi-Fi profile set to **Private**).
 2. **Build on macOS:**
