@@ -219,15 +219,33 @@ func (p *SyncPipeline) Run(ctx context.Context) error {
 }
 
 func (p *SyncPipeline) teardown() {
-	p.browser.Stop()
+	var wg sync.WaitGroup
 
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-	_ = p.server.Stop(shutdownCtx)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		p.browser.Stop()
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 2500*time.Millisecond)
+		defer cancel()
+		if err := p.server.Stop(shutdownCtx); err != nil {
+			_ = p.server.Close()
+		}
+	}()
 
 	if p.announcer != nil {
-		p.announcer.Shutdown()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			p.announcer.Shutdown()
+		}()
 	}
+
+	wg.Wait()
 }
 
 // dispatchLoop continuously consumes clipboard events from the engine and dispatches to peers.
